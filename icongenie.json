@@ -1,0 +1,23 @@
+{
+  "id": "d9f6e8c3-5b4a-4e8d-9c1f-2a3b4c5d6e7f",
+  "name": "xb-calc",
+  "author": "qwe17",
+  "branding": {
+    "iconColor": "#1976D2",
+    "iconColorInverse": "#FFFFFF",
+    "splashScreenColor": "#1976D2",
+    "splashScreenColorInverse": "#FFFFFF",
+    "splashScreenRadiatingColors": []
+  },
+  "build": {
+    "spa": {
+      "background": "#1976D2",
+      "icon": "src/resources/calc.png",
+      "splashscreen": "src/resources/calc.png",
+      "generate": {
+        "public": true,
+        "publicDir": "public"
+      }
+    }
+  }
+}
