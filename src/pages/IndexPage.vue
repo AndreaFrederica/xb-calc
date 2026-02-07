@@ -403,8 +403,10 @@ function toChineseNumber(value: Decimal, numberCase: 'upper' | 'lower' = 'upper'
 
   const chineseDigitsUpper = ['零', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖'];
   const chineseDigitsLower = ['〇', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+  const chineseUnitsUpper = ['', '拾', '佰', '仟', '万', '拾', '佰', '仟', '亿', '拾', '佰', '仟'];
+  const chineseUnitsLower = ['', '十', '百', '千', '万', '十', '百', '千', '亿', '十', '百', '千'];
   const chineseDigits = numberCase === 'upper' ? chineseDigitsUpper : chineseDigitsLower;
-  const chineseUnits = ['', '拾', '佰', '仟', '万', '拾', '佰', '仟', '亿', '拾', '佰', '仟'];
+  const chineseUnits = numberCase === 'upper' ? chineseUnitsUpper : chineseUnitsLower;
 
   function convertInteger(num: number): string {
     if (num === 0) return '零';
@@ -446,20 +448,26 @@ function toChineseNumber(value: Decimal, numberCase: 'upper' | 'lower' = 'upper'
     integerStr = '零';
   }
 
-  let result = integerStr + '元';
+  // 元也需要大小写
+  const yuanUnit = numberCase === 'upper' ? '元' : '圆';
+  let result = integerStr + yuanUnit;
 
   if (decimalPart > 0) {
     const jiao = Math.floor(decimalPart / 10);
     const fen = decimalPart % 10;
 
+    // 角分也需要大小写
+    const jiaoUnit = numberCase === 'upper' ? '角' : '毛';
+    const fenUnit = '分'; // 分没有大小写区别
+
     if (jiao > 0) {
-      result += chineseDigits[jiao] + '角';
+      result += chineseDigits[jiao] + jiaoUnit;
     }
     if (fen > 0) {
-      result += chineseDigits[fen] + '分';
+      result += chineseDigits[fen] + fenUnit;
     }
   } else {
-    result += '整';
+    result += numberCase === 'upper' ? '整' : '正';
   }
 
   if (value.isNegative()) {
