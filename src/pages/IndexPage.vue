@@ -142,14 +142,21 @@
             <q-card
               bordered
               class="q-mt-md total-card"
-              :class="{ 'total-card-sticky': !isDesktop, 'total-card-sticky-with-keypad': !isDesktop && isKeypadOpen }"
+              :class="{
+                'total-card-sticky': !isDesktop,
+                'total-card-sticky-with-keypad': !isDesktop && isKeypadOpen,
+              }"
               ref="totalCardRef"
             >
               <q-card-section class="row items-center justify-between total-card-main">
                 <div class="text-subtitle2">合计</div>
                 <div class="text-right">
                   <div class="text-h5 text-weight-bold">{{ formatMoney(totalSum) }}</div>
-                  <div v-if="showChineseNumber" ref="chineseNumberRef" class="text-subtitle2 text-grey-7">
+                  <div
+                    v-if="showChineseNumber"
+                    ref="chineseNumberRef"
+                    class="text-subtitle2 text-grey-7"
+                  >
                     {{ toChineseNumber(totalSum, chineseNumberCase) }}
                   </div>
                 </div>
@@ -159,23 +166,37 @@
                 <q-btn color="primary" icon="add" dense size="md" @click="addRow">
                   <q-tooltip>新增</q-tooltip>
                 </q-btn>
-                <q-btn color="secondary" outline icon="upload_file" dense size="md" @click="triggerImport">
+                <q-btn
+                  color="secondary"
+                  outline
+                  icon="upload_file"
+                  dense
+                  size="md"
+                  @click="triggerImport"
+                >
                   <q-tooltip>导入</q-tooltip>
                 </q-btn>
                 <q-btn color="secondary" outline icon="download" dense size="md" @click="exportCsv">
                   <q-tooltip>导出</q-tooltip>
                 </q-btn>
-                <q-btn color="negative" flat icon="delete_outline" dense size="md" @click="clearAll">
+                <q-btn
+                  color="negative"
+                  flat
+                  icon="delete_outline"
+                  dense
+                  size="md"
+                  @click="clearAll"
+                >
                   <q-tooltip>清空</q-tooltip>
                 </q-btn>
-                <q-toggle v-model="showChineseNumber" dense size="sm" label="中文" color="primary" />
-                <q-toggle v-model="autoScrollOnKeypad" dense size="sm" label="自动滚" color="primary" />
+                <q-toggle v-model="showChineseNumber" dense size="sm" label="CH" color="primary" />
+                <q-toggle v-model="autoScrollOnKeypad" dense size="sm" label="AS" color="primary" />
                 <q-btn-toggle
                   v-if="showChineseNumber"
                   v-model="chineseNumberCase"
                   :options="[
                     { label: '大', value: 'upper' },
-                    { label: '小', value: 'lower' }
+                    { label: '小', value: 'lower' },
                   ]"
                   dense
                   outline
@@ -183,7 +204,7 @@
                   size="sm"
                   padding="none lg"
                 />
-                <div class="text-caption text-grey-7 q-ml-auto">已保存</div>
+                <div class="text-caption text-grey-7 q-ml-auto"></div>
                 <!-- 移动端键盘按钮 -->
                 <q-btn
                   v-if="!isDesktop"
@@ -529,7 +550,7 @@ function scrollTableToBottom() {
       if (isDesktop.value || !isKeypadOpen.value) {
         window.scrollTo({
           top: document.body.scrollHeight,
-          behavior: 'smooth'
+          behavior: 'smooth',
         });
         return;
       }
@@ -547,7 +568,7 @@ function scrollTableToBottom() {
 
         window.scrollTo({
           top: targetY,
-          behavior: 'smooth'
+          behavior: 'smooth',
         });
       }
     });
@@ -561,7 +582,7 @@ function scrollTablePanelToBottom() {
     }
     tablePanelRef.value.scrollTo({
       top: tablePanelRef.value.scrollHeight,
-      behavior: 'smooth'
+      behavior: 'smooth',
     });
   });
 }
@@ -618,7 +639,7 @@ function toggleKeypad(force?: boolean) {
             requestAnimationFrame(() => {
               window.scrollBy({
                 top: scrollOffset,
-                behavior: 'smooth'
+                behavior: 'smooth',
               });
             });
           });

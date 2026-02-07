@@ -247,7 +247,7 @@
                   @click="handleInput('-')"
                 />
 
-                <!-- 第七行: 0, ., EXP, + -->
+                <!-- 第七行: 0, ./Ans, EXP, + -->
                 <q-btn
                   class="calc-btn btn-digit"
                   color="grey-7"
@@ -258,9 +258,11 @@
                   class="calc-btn"
                   outline
                   color="grey-7"
-                  label="."
-                  @click="handleInput('.')"
-                />
+                  @click="handleDotOrAns"
+                >
+                  <div class="btn-label-main">{{ shiftMode ? 'ANS' : '.' }}</div>
+                  <div class="btn-label-sub">{{ shiftMode ? '.' : 'ANS' }}</div>
+                </q-btn>
                 <q-btn class="calc-btn" outline @click="handleExp">
                   <div class="btn-label-main">EXP</div>
                 </q-btn>
@@ -678,6 +680,15 @@ function handleLogOrExp() {
 // 处理科学计数法
 function handleExp() {
   handleInput('E');
+}
+
+// 处理小数点/Ans
+function handleDotOrAns() {
+  if (shiftMode.value) {
+    handleInput('ANS');
+  } else {
+    handleInput('.');
+  }
 }
 
 // 处理ln/阶乘
