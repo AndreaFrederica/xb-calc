@@ -34,6 +34,9 @@ const DARK_MODE_KEY = 'xb-calc-dark-mode';
 const CALC_STATE_KEY = 'xb-calc-standard-state-v5';
 const FINANCIAL_MODE_KEY = 'xb-calc-financial-mode';
 const DIGIT_GROUPING_KEY = 'xb-calc-digit-grouping';
+const SHOW_CHINESE_NUMBER_KEY = 'xb-calc-show-chinese-number';
+const CHINESE_NUMBER_CASE_KEY = 'xb-calc-chinese-number-case';
+const AUTO_SCROLL_ON_KEYPAD_KEY = 'xb-calc-auto-scroll-on-keypad';
 
 function safeParse<T>(raw: string | null, fallback: T): T {
   if (!raw) return fallback;
@@ -46,11 +49,17 @@ function safeParse<T>(raw: string | null, fallback: T): T {
 
 type StorageState = {
   digitGrouping: '3' | '4';
+  showChineseNumber: boolean;
+  chineseNumberCase: 'upper' | 'lower';
+  autoScrollOnKeypad: boolean;
 };
 
 export const useStorageStore = defineStore('storage', {
   state: (): StorageState => ({
     digitGrouping: localStorage.getItem(DIGIT_GROUPING_KEY) === '4' ? '4' : '3',
+    showChineseNumber: localStorage.getItem(SHOW_CHINESE_NUMBER_KEY) === 'true',
+    chineseNumberCase: (localStorage.getItem(CHINESE_NUMBER_CASE_KEY) as 'upper' | 'lower') ?? 'upper',
+    autoScrollOnKeypad: localStorage.getItem(AUTO_SCROLL_ON_KEYPAD_KEY) !== 'false',
   }),
   actions: {
     getBills(): BillMeta[] {
@@ -121,6 +130,18 @@ export const useStorageStore = defineStore('storage', {
     setDigitGrouping(value: '3' | '4') {
       this.digitGrouping = value;
       localStorage.setItem(DIGIT_GROUPING_KEY, value);
+    },
+    setShowChineseNumber(value: boolean) {
+      this.showChineseNumber = value;
+      localStorage.setItem(SHOW_CHINESE_NUMBER_KEY, String(value));
+    },
+    setChineseNumberCase(value: 'upper' | 'lower') {
+      this.chineseNumberCase = value;
+      localStorage.setItem(CHINESE_NUMBER_CASE_KEY, value);
+    },
+    setAutoScrollOnKeypad(value: boolean) {
+      this.autoScrollOnKeypad = value;
+      localStorage.setItem(AUTO_SCROLL_ON_KEYPAD_KEY, String(value));
     },
   },
 });

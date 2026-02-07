@@ -138,27 +138,63 @@
               </div>
             </div>
 
-            <q-page-sticky
-              v-if="!isDesktop"
-              position="bottom-right"
-              :offset="[16, 16]"
-              :style="{ zIndex: 2100 }"
+            <!-- 移动端合计卡片使用 sticky 定位浮在底部 -->
+            <q-card
+              bordered
+              class="q-mt-md total-card"
+              :class="{ 'total-card-sticky': !isDesktop, 'total-card-sticky-with-keypad': !isDesktop && isKeypadOpen }"
+              ref="totalCardRef"
             >
-              <q-btn color="primary" round icon="dialpad" @click="toggleKeypad()" />
-            </q-page-sticky>
-
-            <q-card bordered class="q-mt-md">
-              <q-card-section class="row items-center justify-between">
-                <div class="text-subtitle1">合计</div>
-                <div class="text-h6 text-weight-bold">{{ formatMoney(totalSum) }}</div>
+              <q-card-section class="row items-center justify-between total-card-main">
+                <div class="text-subtitle2">合计</div>
+                <div class="text-right">
+                  <div class="text-h5 text-weight-bold">{{ formatMoney(totalSum) }}</div>
+                  <div v-if="showChineseNumber" ref="chineseNumberRef" class="text-subtitle2 text-grey-7">
+                    {{ toChineseNumber(totalSum, chineseNumberCase) }}
+                  </div>
+                </div>
               </q-card-section>
               <q-separator />
-              <q-card-section class="row q-gutter-sm">
-                <q-btn color="primary" label="新增一行" @click="addRow" />
-                <q-btn color="secondary" outline label="导入 CSV" @click="triggerImport" />
-                <q-btn color="secondary" outline label="导出 CSV" @click="exportCsv" />
-                <q-btn color="negative" flat label="清空全部" @click="clearAll" />
-                <div class="text-caption text-grey-7 q-ml-auto">已自动保存到本地存储</div>
+              <q-card-section class="row q-gutter-xs total-card-actions">
+                <q-btn color="primary" icon="add" dense size="md" @click="addRow">
+                  <q-tooltip>新增</q-tooltip>
+                </q-btn>
+                <q-btn color="secondary" outline icon="upload_file" dense size="md" @click="triggerImport">
+                  <q-tooltip>导入</q-tooltip>
+                </q-btn>
+                <q-btn color="secondary" outline icon="download" dense size="md" @click="exportCsv">
+                  <q-tooltip>导出</q-tooltip>
+                </q-btn>
+                <q-btn color="negative" flat icon="delete_outline" dense size="md" @click="clearAll">
+                  <q-tooltip>清空</q-tooltip>
+                </q-btn>
+                <q-toggle v-model="showChineseNumber" dense size="sm" label="中文" color="primary" />
+                <q-toggle v-model="autoScrollOnKeypad" dense size="sm" label="自动滚" color="primary" />
+                <q-btn-toggle
+                  v-if="showChineseNumber"
+                  v-model="chineseNumberCase"
+                  :options="[
+                    { label: '大', value: 'upper' },
+                    { label: '小', value: 'lower' }
+                  ]"
+                  dense
+                  outline
+                  color="primary"
+                  size="sm"
+                  padding="none lg"
+                />
+                <div class="text-caption text-grey-7 q-ml-auto">已保存</div>
+                <!-- 移动端键盘按钮 -->
+                <q-btn
+                  v-if="!isDesktop"
+                  color="primary"
+                  icon="dialpad"
+                  dense
+                  size="md"
+                  @click="toggleKeypad()"
+                >
+                  <q-tooltip>键盘</q-tooltip>
+                </q-btn>
               </q-card-section>
             </q-card>
 
@@ -238,10 +274,24 @@ const keyboardSpacerRef = ref<HTMLDivElement | null>(null);
 const spacerHeight = ref('0px');
 const tableRef = ref<{ $el: HTMLElement } | null>(null);
 const tablePanelRef = ref<HTMLDivElement | null>(null);
+const totalCardRef = ref<{ $el: HTMLElement } | null>(null);
+const chineseNumberRef = ref<HTMLDivElement | null>(null);
 const showNote = ref(isDesktop.value);
+const showChineseNumber = computed({
+  get: () => storage.showChineseNumber,
+  set: (value) => storage.setShowChineseNumber(value),
+});
+const chineseNumberCase = computed<'upper' | 'lower'>({
+  get: () => storage.chineseNumberCase,
+  set: (value) => storage.setChineseNumberCase(value),
+});
 const digitGrouping = computed<'3' | '4'>({
   get: () => storage.digitGrouping,
   set: (value: '3' | '4') => storage.setDigitGrouping(value),
+});
+const autoScrollOnKeypad = computed({
+  get: () => storage.autoScrollOnKeypad,
+  set: (value) => storage.setAutoScrollOnKeypad(value),
 });
 const isFourGrouping = computed({
   get: () => digitGrouping.value === '4',
@@ -299,6 +349,79 @@ function toDecimal(value: string) {
   } catch {
     return new Decimal(0);
   }
+}
+
+function toChineseNumber(value: Decimal, numberCase: 'upper' | 'lower' = 'upper'): string {
+  const absValue = value.abs();
+  const integerPart = absValue.floor().toNumber();
+  const decimalPart = absValue.minus(absValue.floor()).times(100).floor().toNumber();
+
+  const chineseDigitsUpper = ['零', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖'];
+  const chineseDigitsLower = ['〇', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+  const chineseDigits = numberCase === 'upper' ? chineseDigitsUpper : chineseDigitsLower;
+  const chineseUnits = ['', '拾', '佰', '仟', '万', '拾', '佰', '仟', '亿', '拾', '佰', '仟'];
+
+  function convertInteger(num: number): string {
+    if (num === 0) return '零';
+
+    let result = '';
+    let unitIndex = 0;
+    let lastNonZero = false;
+
+    while (num > 0) {
+      const digit = num % 10;
+      num = Math.floor(num / 10);
+
+      const digitChar = chineseDigits[digit] ?? chineseDigits[0];
+      const unitChar = chineseUnits[unitIndex] ?? '';
+
+      if (digit !== 0) {
+        result = digitChar + unitChar + result;
+        lastNonZero = true;
+      } else if (lastNonZero && unitIndex % 4 !== 0) {
+        result = chineseDigits[0] + result;
+        lastNonZero = false;
+      }
+
+      // 处理万、亿单位
+      if (unitIndex === 4 && num > 0) {
+        result = chineseUnits[4] + result;
+      } else if (unitIndex === 8 && num > 0) {
+        result = chineseUnits[8] + result;
+      }
+
+      unitIndex++;
+    }
+
+    return result;
+  }
+
+  let integerStr = convertInteger(integerPart);
+  if (integerPart === 0) {
+    integerStr = '零';
+  }
+
+  let result = integerStr + '元';
+
+  if (decimalPart > 0) {
+    const jiao = Math.floor(decimalPart / 10);
+    const fen = decimalPart % 10;
+
+    if (jiao > 0) {
+      result += chineseDigits[jiao] + '角';
+    }
+    if (fen > 0) {
+      result += chineseDigits[fen] + '分';
+    }
+  } else {
+    result += '整';
+  }
+
+  if (value.isNegative()) {
+    result = '负' + result;
+  }
+
+  return result;
 }
 
 function rowTotal(row: RowItem) {
@@ -399,17 +522,35 @@ function clearField() {
 }
 
 function scrollTableToBottom() {
+  // 使用双重 nextTick 确保 DOM 完全更新
   void nextTick(() => {
-    const tableEl = tableRef.value?.$el;
-    if (!tableEl) {
-      return;
-    }
-    const body = tableEl.querySelector<HTMLElement>('.q-table__middle');
-    if (body) {
-      body.scrollTop = body.scrollHeight;
-      return;
-    }
-    tableEl.scrollIntoView({ block: 'end', behavior: 'smooth' });
+    void nextTick(() => {
+      // PC 模式或键盘未打开时，直接滚动到页面底部
+      if (isDesktop.value || !isKeypadOpen.value) {
+        window.scrollTo({
+          top: document.body.scrollHeight,
+          behavior: 'smooth'
+        });
+        return;
+      }
+
+      // 移动端键盘打开时，滚动到高亮单元格
+      const activeCell = document.querySelector('.bg-blue-1');
+      if (activeCell) {
+        const keypadHeight = keypadPanelRef.value?.offsetHeight ?? 0;
+        const totalCardHeight = totalCardRef.value?.$el?.offsetHeight ?? 0;
+        // 偏移量 = 键盘高度 + 合计卡片高度 + 额外间距
+        const offset = keypadHeight + totalCardHeight + 80;
+
+        const rect = activeCell.getBoundingClientRect();
+        const targetY = window.scrollY + rect.top - window.innerHeight + offset;
+
+        window.scrollTo({
+          top: targetY,
+          behavior: 'smooth'
+        });
+      }
+    });
   });
 }
 
@@ -418,7 +559,10 @@ function scrollTablePanelToBottom() {
     if (!tablePanelRef.value) {
       return;
     }
-    tablePanelRef.value.scrollTop = tablePanelRef.value.scrollHeight;
+    tablePanelRef.value.scrollTo({
+      top: tablePanelRef.value.scrollHeight,
+      behavior: 'smooth'
+    });
   });
 }
 
@@ -438,18 +582,49 @@ function toggleKeypad(force?: boolean) {
   const willOpen = typeof force === 'boolean' ? force : !isKeypadOpen.value;
   isKeypadOpen.value = willOpen;
 
-  // 当键盘打开时，动态测量键盘面板高度并设置留白区域
-  if (willOpen) {
-    // 等待过渡动画完成后测量实际高度
-    setTimeout(() => {
-      if (keypadPanelRef.value) {
-        const height = keypadPanelRef.value.offsetHeight;
-        // 加上底部间距（与 CSS 中的 bottom: 12px 一致）
-        spacerHeight.value = `${height + 24}px`;
+  // 移动端始终需要设置空白区域为合计卡片高度
+  if (!isDesktop.value) {
+    const bottomSpacing = 24; // 与 CSS bottom: 12px × 2
+
+    // 立即设置 CSS 变量，使合计卡片的动画与键盘动画同步开始
+    if (willOpen && keypadPanelRef.value && totalCardRef.value?.$el) {
+      const keypadHeight = keypadPanelRef.value.offsetHeight;
+      totalCardRef.value.$el.style.setProperty('--keypad-height', `${keypadHeight}px`);
+    }
+
+    if (totalCardRef.value?.$el) {
+      const totalCardHeight = totalCardRef.value.$el.offsetHeight;
+
+      // 键盘关闭时：只留合计卡片高度的空白
+      if (!willOpen) {
+        spacerHeight.value = `${totalCardHeight + bottomSpacing}px`;
+        // 清除 CSS 变量，让合计卡片回到默认位置
+        totalCardRef.value.$el.style.removeProperty('--keypad-height');
       }
-    }, 300); // 与 CSS transition 时间一致
-  } else {
-    spacerHeight.value = '0px';
+    }
+
+    // 等待过渡动画完成后更新空白区域高度
+    setTimeout(() => {
+      if (willOpen && keypadPanelRef.value && totalCardRef.value?.$el) {
+        const keypadHeight = keypadPanelRef.value.offsetHeight;
+        const totalCardHeight = totalCardRef.value.$el.offsetHeight;
+        // 键盘高度 + 合计卡片高度 + 底部间距
+        const scrollOffset = keypadHeight + totalCardHeight + bottomSpacing;
+        spacerHeight.value = `${scrollOffset}px`;
+
+        // 如果开启了自动滚动，等待键盘动画完全完成后再滚动
+        if (autoScrollOnKeypad.value) {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              window.scrollBy({
+                top: scrollOffset,
+                behavior: 'smooth'
+              });
+            });
+          });
+        }
+      }
+    }, 200);
   }
 }
 
@@ -573,6 +748,9 @@ function handleGlobalKeydown(event: KeyboardEvent) {
     event.preventDefault();
     moveToNextCell();
     scrollTableToBottom();
+    if (!isDesktop.value) {
+      scrollTablePanelToBottom();
+    }
     return;
   }
   if (key === 'Tab') {
@@ -812,6 +990,7 @@ watch(
   height: 100%;
 }
 
+/* 移动端键盘面板 */
 .mobile-keypad-panel {
   position: fixed;
   left: 12px;
@@ -824,6 +1003,32 @@ watch(
 
 .mobile-keypad-panel.open {
   transform: translateY(0%);
+}
+
+/* 合计卡片 sticky 样式 - 移动端始终悬浮在底部 */
+.total-card-sticky {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 1998;
+  margin: 0 !important;
+  transition: bottom 0.2s ease-in-out;
+}
+
+/* 当键盘打开时，合计卡片上移到键盘上方 */
+.total-card-sticky-with-keypad {
+  bottom: calc(12px + var(--keypad-height, 240px)) !important;
+}
+
+/* 合计卡片紧凑样式 */
+.total-card .total-card-main {
+  padding: 8px 12px;
+}
+
+.total-card .total-card-actions {
+  padding: 6px 12px;
+  flex-wrap: wrap;
 }
 
 @media (max-width: 600px) {

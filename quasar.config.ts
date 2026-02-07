@@ -63,6 +63,12 @@ export default (ctx: any) => {
       // extendViteConf (viteConf) {},
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       extendViteConf(viteConf: any) {
+        // 启用 source map 以便调试
+        if (ctx.dev) {
+          viteConf.build = viteConf.build || {};
+          viteConf.build.sourcemap = true;
+        }
+
         viteConf.resolve = viteConf.resolve || {};
         viteConf.resolve.alias = viteConf.resolve.alias || {};
         // 添加 utils 路径别名
