@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx icongenie generate:*)"
+      "Bash(npx icongenie generate:*)",
+      "Bash(npx quasar mode add:*)"
     ]
   }
 }

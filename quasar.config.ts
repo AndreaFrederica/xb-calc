@@ -167,12 +167,118 @@ export default defineConfig((ctx) => {
       workboxMode: 'GenerateSW', // 'GenerateSW' or 'InjectManifest'
       // swFilename: 'sw.js',
       // manifestFilename: 'manifest.json',
-      // extendManifestJson (json) {},
-      // useCredentialsForManifestTag: true,
-      // injectPwaMetaTags: false,
-      // extendPWACustomSWConf (esbuildConf) {},
-      // extendGenerateSWOptions (cfg) {},
-      // extendInjectManifestOptions (cfg) {}
+      injectPwaMetaTags: true,
+      useCredentialsForManifestTag: false,
+      extendManifestJson(json) {
+        json.name = '专一计算器';
+        json.short_name = '计算器';
+        json.description = '简单的数量×单价计算器，支持多账单管理';
+        json.display = 'standalone';
+        json.orientation = 'any';
+        json.background_color = '#1976D2';
+        json.theme_color = '#1976D2';
+        json.icons = [
+          {
+            src: 'icons/icon-512x512.png',
+            sizes: '512x512',
+            type: 'image/png'
+          },
+          {
+            src: 'icons/icon-384x384.png',
+            sizes: '384x384',
+            type: 'image/png'
+          },
+          {
+            src: 'icons/icon-256x256.png',
+            sizes: '256x256',
+            type: 'image/png'
+          },
+          {
+            src: 'icons/icon-192x192.png',
+            sizes: '192x192',
+            type: 'image/png'
+          },
+          {
+            src: 'icons/favicon-128x128.png',
+            sizes: '128x128',
+            type: 'image/png'
+          },
+          {
+            src: 'icons/favicon-96x96.png',
+            sizes: '96x96',
+            type: 'image/png'
+          },
+          {
+            src: 'icons/favicon-32x32.png',
+            sizes: '32x32',
+            type: 'image/png'
+          },
+          {
+            src: 'icons/favicon-16x16.png',
+            sizes: '16x16',
+            type: 'image/png'
+          }
+        ];
+      },
+      extendPWACustomSWConf(esbuildConf) {
+        // 可以在这里自定义 service worker 的构建配置
+      },
+      extendGenerateSWOptions(options) {
+        // 配置 Workbox 选项以实现离线可用
+        options.skipWaiting = true;
+        options.clientsClaim = true;
+        options.navigateFallback = '/index.html';
+        options.navigateFallbackDenylist = [/workbox-(.)*.js$/];
+        options.runtimeCaching = [
+          {
+            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-cache',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          },
+          {
+            urlPattern: /\.(?:eot|otf|ttc|ttf|woff|woff2|font.css)$/i,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'font-cache',
+              expiration: {
+                maxEntries: 4,
+                maxAgeSeconds: 7 * 24 * 60 * 60 // 7 days
+              }
+            }
+          },
+          {
+            urlPattern: /\.(?:jpg|jpeg|png|gif|ico|svg|webp)$/i,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'image-cache',
+              expiration: {
+                maxEntries: 60,
+                maxAgeSeconds: 30 * 24 * 60 * 60 // 30 days
+              }
+            }
+          },
+          {
+            urlPattern: /\.(?:js|css)$/i,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'static-resources-cache',
+              expiration: {
+                maxEntries: 60,
+                maxAgeSeconds: 30 * 24 * 60 * 60 // 30 days
+              }
+            }
+          }
+        ];
+      }
     },
 
     // Full list of options: https://v2.quasar.dev/quasar-cli-vite/developing-cordova-apps/configuring-cordova
