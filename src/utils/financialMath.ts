@@ -231,6 +231,16 @@ function tokenizeExpression(expr: string): (Decimal | string)[] {
   const tokens: (Decimal | string)[] = [];
   let i = 0;
 
+  // 辅助函数：判断前一个 token 是否需要一元负号
+  const needsUnaryMinus = (): boolean => {
+    if (tokens.length === 0) return true;
+    const last = tokens[tokens.length - 1];
+    if (typeof last === 'string') {
+      return ['(', '+', '-', '*', '/', '^'].includes(last);
+    }
+    return false;
+  };
+
   while (i < expr.length) {
     const char = expr[i]!; // 安全：i < expr.length 保证 char 存在
 
@@ -238,6 +248,51 @@ function tokenizeExpression(expr: string): (Decimal | string)[] {
     if (/\s/.test(char)) {
       i++;
       continue;
+    }
+
+    // 处理负号（一元负号 vs 二元减号）
+    if (char === '-') {
+      if (needsUnaryMinus()) {
+        // 一元负号：读取负数
+        let num = '-';
+        i++;
+        // 跳过可能的空格
+        while (i < expr.length && /\s/.test(expr[i]!)) {
+          i++;
+        }
+        // 读取数字部分
+        let dotCount = 0;
+        while (i < expr.length) {
+          const c = expr[i]!;
+          if (/[\d]/.test(c) || (c === '.' && dotCount === 0)) {
+            if (c === '.') dotCount++;
+            num += c;
+            i++;
+          } else {
+            break;
+          }
+        }
+        // 检查科学计数法
+        if (i < expr.length && (expr[i] === 'e' || expr[i] === 'E')) {
+          num += expr[i]!;
+          i++;
+          if (i < expr.length && (expr[i] === '+' || expr[i] === '-')) {
+            num += expr[i]!;
+            i++;
+          }
+          while (i < expr.length && /\d/.test(expr[i]!)) {
+            num += expr[i]!;
+            i++;
+          }
+        }
+        tokens.push(new Decimal(num));
+        continue;
+      } else {
+        // 二元减号
+        tokens.push(char);
+        i++;
+        continue;
+      }
     }
 
     // 处理数字（包括科学计数法）
@@ -272,7 +327,7 @@ function tokenizeExpression(expr: string): (Decimal | string)[] {
     }
 
     // 处理运算符
-    if (/[+\-*/^()]/.test(char)) {
+    if (/[+*/^()]/.test(char)) {
       tokens.push(char);
       i++;
       continue;

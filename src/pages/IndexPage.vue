@@ -291,10 +291,11 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useQuasar, type QTableColumn } from 'quasar';
-import Decimal from 'decimal.js';
 import KeypadPanel from 'components/KeypadPanel.vue';
 import StandardCalculator from 'components/StandardCalculator.vue';
 import { useStorageStore, type BillMeta, type RowItem } from 'stores/storage-store';
+import { PreciseNumber } from 'utils/PreciseNumber';
+import { toChineseNumber } from 'utils/ChineseNumberConverter';
 
 type NumericField = 'qty' | 'unitPrice';
 type KeypadKey = { label: string; type: 'digit' | 'dot' | 'enter' };
@@ -372,117 +373,23 @@ const keypadKeys: KeypadKey[] = [
   { label: '回车', type: 'enter' },
 ];
 
-function formatMoney(value: Decimal) {
-  const raw = value.toFixed(2);
-  const trimmed = raw.replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
-  const sign = trimmed.startsWith('-') ? '-' : '';
-  const unsigned = sign ? trimmed.slice(1) : trimmed;
-  const [integerPartRaw, decimalPart] = unsigned.split('.');
-  const integerPart = integerPartRaw ?? '0';
-  const groupingRegex =
-    digitGrouping.value === '4' ? /\B(?=(\d{4})+(?!\d))/g : /\B(?=(\d{3})+(?!\d))/g;
-  const formattedInt = integerPart.replace(groupingRegex, ',');
-  return decimalPart ? `${sign}${formattedInt}.${decimalPart}` : `${sign}${formattedInt}`;
+function formatMoney(value: PreciseNumber) {
+  return value.toFormatted(digitGrouping.value);
 }
 
-function toDecimal(value: string) {
+function toPreciseNumber(value: string): PreciseNumber {
   if (!value || value === '.' || value === '0.') {
-    return new Decimal(0);
+    return new PreciseNumber('0');
   }
-  try {
-    return new Decimal(value);
-  } catch {
-    return new Decimal(0);
-  }
+  return new PreciseNumber(value);
 }
 
-function toChineseNumber(value: Decimal, numberCase: 'upper' | 'lower' = 'upper'): string {
-  const absValue = value.abs();
-  const integerPart = absValue.floor().toNumber();
-  const decimalPart = absValue.minus(absValue.floor()).times(100).floor().toNumber();
-
-  const chineseDigitsUpper = ['零', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖'];
-  const chineseDigitsLower = ['〇', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
-  const chineseUnitsUpper = ['', '拾', '佰', '仟', '万', '拾', '佰', '仟', '亿', '拾', '佰', '仟'];
-  const chineseUnitsLower = ['', '十', '百', '千', '万', '十', '百', '千', '亿', '十', '百', '千'];
-  const chineseDigits = numberCase === 'upper' ? chineseDigitsUpper : chineseDigitsLower;
-  const chineseUnits = numberCase === 'upper' ? chineseUnitsUpper : chineseUnitsLower;
-
-  function convertInteger(num: number): string {
-    if (num === 0) return '零';
-
-    let result = '';
-    let unitIndex = 0;
-    let lastNonZero = false;
-
-    while (num > 0) {
-      const digit = num % 10;
-      num = Math.floor(num / 10);
-
-      const digitChar = chineseDigits[digit] ?? chineseDigits[0];
-      const unitChar = chineseUnits[unitIndex] ?? '';
-
-      if (digit !== 0) {
-        result = digitChar + unitChar + result;
-        lastNonZero = true;
-      } else if (lastNonZero && unitIndex % 4 !== 0) {
-        result = chineseDigits[0] + result;
-        lastNonZero = false;
-      }
-
-      // 处理万、亿单位
-      if (unitIndex === 4 && num > 0) {
-        result = chineseUnits[4] + result;
-      } else if (unitIndex === 8 && num > 0) {
-        result = chineseUnits[8] + result;
-      }
-
-      unitIndex++;
-    }
-
-    return result;
-  }
-
-  let integerStr = convertInteger(integerPart);
-  if (integerPart === 0) {
-    integerStr = '零';
-  }
-
-  // 元也需要大小写
-  const yuanUnit = numberCase === 'upper' ? '元' : '圆';
-  let result = integerStr + yuanUnit;
-
-  if (decimalPart > 0) {
-    const jiao = Math.floor(decimalPart / 10);
-    const fen = decimalPart % 10;
-
-    // 角分也需要大小写
-    const jiaoUnit = numberCase === 'upper' ? '角' : '毛';
-    const fenUnit = '分'; // 分没有大小写区别
-
-    if (jiao > 0) {
-      result += chineseDigits[jiao] + jiaoUnit;
-    }
-    if (fen > 0) {
-      result += chineseDigits[fen] + fenUnit;
-    }
-  } else {
-    result += numberCase === 'upper' ? '整' : '正';
-  }
-
-  if (value.isNegative()) {
-    result = '负' + result;
-  }
-
-  return result;
-}
-
-function rowTotal(row: RowItem) {
-  return toDecimal(row.qty).mul(toDecimal(row.unitPrice));
+function rowTotal(row: RowItem): PreciseNumber {
+  return toPreciseNumber(row.qty).multiply(toPreciseNumber(row.unitPrice));
 }
 
 const totalSum = computed(() =>
-  rows.value.reduce((sum: Decimal, row: RowItem) => sum.add(rowTotal(row)), new Decimal(0)),
+  rows.value.reduce((sum: PreciseNumber, row: RowItem) => sum.add(rowTotal(row)), new PreciseNumber('0')),
 );
 
 function createRow(): RowItem {
@@ -953,7 +860,7 @@ function exportCsv() {
   const lines = rows.value.map((row: RowItem) => {
     const qty = row.qty ?? '';
     const unitPrice = row.unitPrice ?? '';
-    const total = rowTotal(row).toFixed(2);
+    const total = rowTotal(row).toString();
     const note = (row.note ?? '').replace(/\r?\n/g, ' ');
     const escapedNote = note.replace(/"/g, '""');
     return [qty, unitPrice, total, `"${escapedNote}"`].join(',');

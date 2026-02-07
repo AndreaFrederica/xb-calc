@@ -6,7 +6,9 @@
       "Bash(npm run type-check:*)",
       "Bash(echo:*)",
       "Bash(npm run lint)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(pnpm test:run:*)",
+      "Bash(npx vue-tsc:*)"
     ]
   }
 }
