@@ -44,6 +44,16 @@
                     {{ financialMode ? '普通' : '金融' }}
                   </q-btn>
                   <q-btn
+                    flat
+                    dense
+                    size="sm"
+                    padding="none xs"
+                    class="mode-toggle-btn"
+                    @click="toggleDigitGrouping"
+                  >
+                    {{ digitGrouping === '4' ? '四位' : '三位' }}
+                  </q-btn>
+                  <q-btn
                     v-if="history.length > 0"
                     flat
                     dense
@@ -307,6 +317,10 @@ const expressionRef = ref<HTMLElement | null>(null);
 const history = ref<HistoryItem[]>([]);
 const historyDisplayRef = ref<HTMLDivElement | null>(null);
 const historyDisplayRefMobile = ref<HTMLDivElement | null>(null);
+const digitGrouping = computed<'3' | '4'>({
+  get: () => storage.digitGrouping,
+  set: (value: '3' | '4') => storage.setDigitGrouping(value),
+});
 
 // 检测是否为桌面模式
 const isDesktop = computed(() => $q.screen.gt.md);
@@ -325,6 +339,27 @@ const displayHistory = computed(() => {
 function toggleFinancialMode() {
   financialMode.value = !financialMode.value;
   storage.setFinancialMode(financialMode.value);
+}
+
+function toggleDigitGrouping() {
+  digitGrouping.value = digitGrouping.value === '4' ? '3' : '4';
+}
+
+function applyDigitGrouping(value: string): string {
+  if (!value || /[eE]/.test(value)) {
+    return value;
+  }
+  if (value === 'NaN' || value === 'Infinity' || value === '-Infinity') {
+    return value;
+  }
+  const sign = value.startsWith('-') ? '-' : '';
+  const unsigned = sign ? value.slice(1) : value;
+  const [integerPartRaw, decimalPart] = unsigned.split('.');
+  const integerPart = integerPartRaw ?? '0';
+  const groupingRegex =
+    digitGrouping.value === '4' ? /\B(?=(\d{4})+(?!\d))/g : /\B(?=(\d{3})+(?!\d))/g;
+  const groupedInt = integerPart.replace(groupingRegex, ',');
+  return decimalPart ? `${sign}${groupedInt}.${decimalPart}` : `${sign}${groupedInt}`;
 }
 
 // 清除历史记录
@@ -354,9 +389,9 @@ function formatDisplayResult(value: number): string {
   // 尝试格式化为可读格式
   try {
     const formatted = format(value, { precision: 10, notation: 'auto' });
-    return formatted;
+    return applyDigitGrouping(formatted);
   } catch {
-    return String(value);
+    return applyDigitGrouping(String(value));
   }
 }
 

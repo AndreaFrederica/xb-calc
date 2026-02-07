@@ -21,7 +21,7 @@
       <q-tab-panels v-model="activeTab" animated>
         <!-- 表格计算面板 -->
         <q-tab-panel name="table" class="q-pa-none">
-          <div class="q-pa-md">
+          <div class="q-pa-md table-panel" ref="tablePanelRef">
             <div class="text-h5 q-mb-xs">数量 × 单价 = 价格</div>
             <div class="row items-center q-mb-md">
               <div class="text-caption text-grey-7">当前账单：{{ activeBillName || '未选择' }}</div>
@@ -41,24 +41,40 @@
 
             <div class="row q-col-gutter-md">
               <div :class="tableColClass">
-                <q-card bordered>
-                  <q-card-section class="row items-center justify-between">
-                    <div class="text-subtitle1">明细</div>
+                <q-card class="table-card">
+                  <q-card-section class="row items-center justify-between table-card-header">
+                    <div class="row items-center q-gutter-sm">
+                      <div class="text-subtitle1">明细</div>
+                      <q-toggle
+                        v-model="showNote"
+                        dense
+                        size="sm"
+                        color="primary"
+                        label="显示备注"
+                      />
+                      <q-toggle
+                        v-model="isFourGrouping"
+                        dense
+                        size="sm"
+                        color="primary"
+                        label="四位分隔"
+                      />
+                    </div>
                     <q-btn color="primary" icon="add" label="新增一行" @click="addRow" />
                   </q-card-section>
 
                   <q-separator />
 
-                  <q-card-section>
+                  <q-card-section class="table-card-body">
                     <q-table
                       ref="tableRef"
                       :rows="rows"
-                      :columns="columns"
+                      :columns="tableColumns"
                       row-key="id"
                       flat
-                      bordered
                       dense
                       :rows-per-page-options="[0]"
+                      class="excel-table"
                     >
                       <template #body-cell-qty="props">
                         <q-td :props="props">
@@ -221,6 +237,18 @@ const keypadPanelRef = ref<HTMLDivElement | null>(null);
 const keyboardSpacerRef = ref<HTMLDivElement | null>(null);
 const spacerHeight = ref('0px');
 const tableRef = ref<{ $el: HTMLElement } | null>(null);
+const tablePanelRef = ref<HTMLDivElement | null>(null);
+const showNote = ref(isDesktop.value);
+const digitGrouping = computed<'3' | '4'>({
+  get: () => storage.digitGrouping,
+  set: (value: '3' | '4') => storage.setDigitGrouping(value),
+});
+const isFourGrouping = computed({
+  get: () => digitGrouping.value === '4',
+  set: (value) => {
+    digitGrouping.value = value ? '4' : '3';
+  },
+});
 
 const columns: QTableColumn[] = [
   { name: 'qty', label: '数量', field: 'qty', align: 'right' },
@@ -229,6 +257,10 @@ const columns: QTableColumn[] = [
   { name: 'note', label: '备注', field: 'note', align: 'left' },
   { name: 'actions', label: '操作', field: 'actions', align: 'center' },
 ];
+
+const tableColumns = computed(() =>
+  showNote.value ? columns : columns.filter((col) => col.name !== 'note'),
+);
 
 const keypadKeys: KeypadKey[] = [
   { label: '7', type: 'digit' },
@@ -252,7 +284,9 @@ function formatMoney(value: Decimal) {
   const unsigned = sign ? trimmed.slice(1) : trimmed;
   const [integerPartRaw, decimalPart] = unsigned.split('.');
   const integerPart = integerPartRaw ?? '0';
-  const formattedInt = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const groupingRegex =
+    digitGrouping.value === '4' ? /\B(?=(\d{4})+(?!\d))/g : /\B(?=(\d{3})+(?!\d))/g;
+  const formattedInt = integerPart.replace(groupingRegex, ',');
   return decimalPart ? `${sign}${formattedInt}.${decimalPart}` : `${sign}${formattedInt}`;
 }
 
@@ -379,10 +413,22 @@ function scrollTableToBottom() {
   });
 }
 
+function scrollTablePanelToBottom() {
+  void nextTick(() => {
+    if (!tablePanelRef.value) {
+      return;
+    }
+    tablePanelRef.value.scrollTop = tablePanelRef.value.scrollHeight;
+  });
+}
+
 function handleKeypad(key: { label: string; type: 'digit' | 'dot' | 'enter' }) {
   if (key.type === 'enter') {
     moveToNextCell();
     scrollTableToBottom();
+    if (!isDesktop.value) {
+      scrollTablePanelToBottom();
+    }
     return;
   }
   appendValue(key.label);
@@ -679,6 +725,9 @@ function exportCsv() {
 }
 
 onMounted(() => {
+  if (!isDesktop.value) {
+    showNote.value = false;
+  }
   updateActiveBillFromStorage();
   loadFromStorage();
   window.addEventListener('keydown', handleGlobalKeydown);
@@ -742,6 +791,23 @@ watch(
   overflow: auto;
 }
 
+.table-panel {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.table-card {
+  width: 100%;
+}
+
+.excel-table :deep(.q-field__control) {
+  padding: 0 6px;
+}
+
+.excel-table :deep(.q-field__native) {
+  text-align: right;
+}
+
 .standard-panel {
   height: 100%;
 }
@@ -758,6 +824,31 @@ watch(
 
 .mobile-keypad-panel.open {
   transform: translateY(0%);
+}
+
+@media (max-width: 600px) {
+  .table-panel {
+    padding: 4px 2px;
+  }
+
+  .table-card {
+    border-radius: 4px;
+    box-shadow: none;
+  }
+
+  .table-card-header,
+  .table-card-body {
+    padding: 4px;
+  }
+
+  .excel-table :deep(.q-table thead th),
+  .excel-table :deep(.q-table tbody td) {
+    padding: 4px 6px;
+  }
+
+  .excel-table :deep(.q-field__control) {
+    padding: 0 4px;
+  }
 }
 
 /* 键盘留白区域 - 防止内容被键盘遮挡 */

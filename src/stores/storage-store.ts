@@ -33,6 +33,7 @@ const ROWS_PREFIX = 'xb-calc-rows-v1:';
 const DARK_MODE_KEY = 'xb-calc-dark-mode';
 const CALC_STATE_KEY = 'xb-calc-standard-state-v5';
 const FINANCIAL_MODE_KEY = 'xb-calc-financial-mode';
+const DIGIT_GROUPING_KEY = 'xb-calc-digit-grouping';
 
 function safeParse<T>(raw: string | null, fallback: T): T {
   if (!raw) return fallback;
@@ -43,7 +44,14 @@ function safeParse<T>(raw: string | null, fallback: T): T {
   }
 }
 
+type StorageState = {
+  digitGrouping: '3' | '4';
+};
+
 export const useStorageStore = defineStore('storage', {
+  state: (): StorageState => ({
+    digitGrouping: localStorage.getItem(DIGIT_GROUPING_KEY) === '4' ? '4' : '3',
+  }),
   actions: {
     getBills(): BillMeta[] {
       const parsed = safeParse<{ bills: BillMeta[] }>(
@@ -106,6 +114,13 @@ export const useStorageStore = defineStore('storage', {
     },
     setFinancialMode(value: boolean) {
       localStorage.setItem(FINANCIAL_MODE_KEY, String(value));
+    },
+    getDigitGrouping(): '3' | '4' {
+      return this.digitGrouping;
+    },
+    setDigitGrouping(value: '3' | '4') {
+      this.digitGrouping = value;
+      localStorage.setItem(DIGIT_GROUPING_KEY, value);
     },
   },
 });

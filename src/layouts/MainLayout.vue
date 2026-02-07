@@ -9,6 +9,16 @@
         <q-btn
           flat
           dense
+          aria-label="新建账单"
+          icon="add_circle_outline"
+          @click="createNewBill"
+        >
+          <q-tooltip>新建账单</q-tooltip>
+        </q-btn>
+
+        <q-btn
+          flat
+          dense
           :aria-label="isDark ? '切换到亮色模式' : '切换到暗色模式'"
           :icon="isDark ? 'dark_mode' : 'light_mode'"
           @click="toggleDarkMode"

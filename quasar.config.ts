@@ -190,6 +190,7 @@ export default (ctx: any) => {
         json.orientation = 'any';
         json.background_color = '#1976D2';
         json.theme_color = '#1976D2';
+        json.lang = 'zh-CN';
         json.icons = [
           {
             src: 'icons/icon-512x512.png',
