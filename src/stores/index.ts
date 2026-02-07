@@ -1,4 +1,3 @@
-import { defineStore } from '#q-app/wrappers';
 import { createPinia } from 'pinia';
 
 /*
@@ -22,11 +21,12 @@ declare module 'pinia' {
  * with the Store instance.
  */
 
-export default defineStore((/* { ssrContext } */) => {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export default (_ctx: unknown) => {
   const pinia = createPinia();
 
   // You can add Pinia plugins here
   // pinia.use(SomePiniaPlugin)
 
   return pinia;
-});
+};

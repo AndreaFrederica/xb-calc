@@ -1,11 +1,10 @@
-import { defineBoot } from '#q-app/wrappers';
 import { createI18n } from 'vue-i18n';
 
-import messages from 'src/i18n';
+import messages from '../i18n';
 
-export type MessageLanguages = keyof typeof messages;
-// Type-define 'en-US' as the master schema for the resource
-export type MessageSchema = (typeof messages)['en-US'];
+export type MessageLanguages = 'zh-CN';
+// Type-define 'zh-CN' as the master schema for the resource
+export type MessageSchema = (typeof messages)['zh-CN'];
 
 // See https://vue-i18n.intlify.dev/guide/advanced/typescript.html#global-resource-schema-type-definition
 /* eslint-disable @typescript-eslint/no-empty-object-type */
@@ -21,13 +20,13 @@ declare module 'vue-i18n' {
 }
 /* eslint-enable @typescript-eslint/no-empty-object-type */
 
-export default defineBoot(({ app }) => {
+export default ({ app }: { app: { use: (plugin: unknown) => void } }) => {
   const i18n = createI18n<{ message: MessageSchema }, MessageLanguages>({
-    locale: 'en-US',
+    locale: 'zh-CN',
     legacy: false,
     messages,
   });
 
   // Set i18n instance on app
   app.use(i18n);
-});
+};

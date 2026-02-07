@@ -1,3 +1,6 @@
+import './types/quasar-auto-import';
+import 'vite/client';
+
 declare namespace NodeJS {
   interface ProcessEnv {
     NODE_ENV: string;

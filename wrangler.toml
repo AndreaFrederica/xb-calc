@@ -1,0 +1,4 @@
+# Cloudflare Pages 配置（纯静态）
+# wrangler.toml
+name = "xbcalc"
+pages_build_output_dir = "dist/pwa"

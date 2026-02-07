@@ -1,4 +1,3 @@
-import { defineRouter } from '#q-app/wrappers';
 import {
   createMemoryHistory,
   createRouter,
@@ -16,7 +15,7 @@ import routes from './routes';
  * with the Router instance.
  */
 
-export default defineRouter(function (/* { store, ssrContext } */) {
+export default function (/* { store, ssrContext } */) {
   const createHistory = process.env.SERVER
     ? createMemoryHistory
     : process.env.VUE_ROUTER_MODE === 'history'
@@ -34,4 +33,4 @@ export default defineRouter(function (/* { store, ssrContext } */) {
   });
 
   return Router;
-});
+}

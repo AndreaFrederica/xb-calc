@@ -1,10 +1,10 @@
 // Configuration for your app
 // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file
 
-import { defineConfig } from '#q-app/wrappers';
 import { fileURLToPath } from 'node:url';
 
-export default defineConfig((ctx) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export default (ctx: any) => {
   return {
     // https://v2.quasar.dev/quasar-cli-vite/prefetch-feature
     // preFetch: true,
@@ -61,6 +61,18 @@ export default defineConfig((ctx) => {
       // distDir
 
       // extendViteConf (viteConf) {},
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      extendViteConf(viteConf: any) {
+        viteConf.resolve = viteConf.resolve || {};
+        viteConf.resolve.alias = viteConf.resolve.alias || {};
+        // 添加 utils 路径别名
+        (viteConf.resolve.alias as Record<string, string>)['utils'] = '/src/utils';
+        (viteConf.resolve.alias as Record<string, string>)['stores'] = '/src/stores';
+        (viteConf.resolve.alias as Record<string, string>)['components'] = '/src/components';
+        (viteConf.resolve.alias as Record<string, string>)['pages'] = '/src/pages';
+        (viteConf.resolve.alias as Record<string, string>)['layouts'] = '/src/layouts';
+        (viteConf.resolve.alias as Record<string, string>)['boot'] = '/src/boot';
+      },
       // viteVuePluginOptions: {},
 
       vitePlugins: [
@@ -169,7 +181,8 @@ export default defineConfig((ctx) => {
       // manifestFilename: 'manifest.json',
       injectPwaMetaTags: true,
       useCredentialsForManifestTag: false,
-      extendManifestJson(json) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      extendManifestJson(json: any) {
         json.name = '专一计算器';
         json.short_name = '计算器';
         json.description = '简单的数量×单价计算器，支持多账单管理';
@@ -220,10 +233,12 @@ export default defineConfig((ctx) => {
           }
         ];
       },
-      extendPWACustomSWConf(esbuildConf) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      extendPWACustomSWConf(esbuildConf: any) {
         // 可以在这里自定义 service worker 的构建配置
       },
-      extendGenerateSWOptions(options) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      extendGenerateSWOptions(options: any) {
         // 配置 Workbox 选项以实现离线可用
         options.skipWaiting = true;
         options.clientsClaim = true;
@@ -340,4 +355,4 @@ export default defineConfig((ctx) => {
       extraScripts: [],
     },
   };
-});
+};

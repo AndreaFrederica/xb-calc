@@ -1,19 +1,21 @@
 <template>
   <q-layout view="lHh Lpr lFf">
-    <q-header elevated>
+    <q-header bordered class="app-header">
       <q-toolbar>
         <q-btn flat dense round icon="menu" aria-label="Menu" @click="toggleLeftDrawer" />
 
-        <q-toolbar-title> 专一计算器 </q-toolbar-title>
+        <q-toolbar-title>专一计算器</q-toolbar-title>
 
         <q-btn
           flat
           dense
-          round
           :aria-label="isDark ? '切换到亮色模式' : '切换到暗色模式'"
-          :icon="isDark ? 'light_mode' : 'dark_mode'"
+          :icon="isDark ? 'dark_mode' : 'light_mode'"
           @click="toggleDarkMode"
-        />
+          class="dark-mode-btn"
+        >
+          <q-tooltip>{{ isDark ? '切换到亮色模式' : '切换到暗色模式' }}</q-tooltip>
+        </q-btn>
       </q-toolbar>
     </q-header>
 
@@ -37,20 +39,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useQuasar, Dark } from 'quasar';
+import { useStorageStore, type BillMeta } from 'stores/storage-store';
 import BillList from 'components/BillList.vue';
 
-interface BillMeta {
-  id: string;
-  name: string;
-  updatedAt: string;
-}
-
-const BILLS_KEY = 'xb-calc-bills-v1';
-const ACTIVE_BILL_KEY = 'xb-calc-active-bill-v1';
-const ROWS_PREFIX = 'xb-calc-rows-v1:';
-const DARK_MODE_KEY = 'xb-calc-dark-mode';
-
 const $q = useQuasar();
+const storage = useStorageStore();
 const leftDrawerOpen = ref(false);
 const bills = ref<BillMeta[]>([]);
 const activeBillId = ref('');
@@ -60,20 +53,22 @@ const isDark = computed(() => Dark.isActive);
 
 // 从 localStorage 读取 dark mode 偏好
 function loadDarkModePreference() {
-  const stored = localStorage.getItem(DARK_MODE_KEY);
-  if (stored === 'true') {
+  const stored = storage.getDarkMode();
+  if (stored === true) {
     Dark.set(true);
-  } else if (stored === 'false') {
-    Dark.set(false);
-  } else {
-    Dark.set('auto');
+    return;
   }
+  if (stored === false) {
+    Dark.set(false);
+    return;
+  }
+  Dark.set('auto');
 }
 
 // 切换 dark mode
 function toggleDarkMode() {
   Dark.toggle();
-  localStorage.setItem(DARK_MODE_KEY, String(Dark.isActive));
+  storage.setDarkMode(Dark.isActive);
 }
 
 function toggleLeftDrawer() {
@@ -81,12 +76,12 @@ function toggleLeftDrawer() {
 }
 
 function persistBills() {
-  localStorage.setItem(BILLS_KEY, JSON.stringify({ bills: bills.value }));
+  storage.setBills(bills.value);
 }
 
 function persistActiveBill() {
   if (activeBillId.value) {
-    localStorage.setItem(ACTIVE_BILL_KEY, activeBillId.value);
+    storage.setActiveBillId(activeBillId.value);
     window.dispatchEvent(new CustomEvent('xb-bill-changed'));
   }
 }
@@ -104,24 +99,14 @@ function createBill(name?: string) {
 }
 
 function loadBills() {
-  const raw = localStorage.getItem(BILLS_KEY);
-  if (raw) {
-    try {
-      const parsed = JSON.parse(raw) as { bills: BillMeta[] };
-      if (Array.isArray(parsed.bills) && parsed.bills.length > 0) {
-        bills.value = parsed.bills;
-      }
-    } catch {
-      bills.value = [];
-    }
-  }
+  bills.value = storage.getBills();
   if (bills.value.length === 0) {
     bills.value = [createBill('默认账单')];
     persistBills();
   }
-  const storedActive = localStorage.getItem(ACTIVE_BILL_KEY);
+  const storedActive = storage.getActiveBillId();
   activeBillId.value =
-    storedActive && bills.value.some((b) => b.id === storedActive)
+    storedActive && bills.value.some((b: BillMeta) => b.id === storedActive)
       ? storedActive
       : getFirstBillId();
   persistActiveBill();
@@ -153,7 +138,7 @@ function createNewBill() {
 }
 
 function renameBill(billId: string) {
-  const target = bills.value.find((bill) => bill.id === billId);
+  const target = bills.value.find((bill: BillMeta) => bill.id === billId);
   if (!target) return;
   $q.dialog({
     title: '重命名账单',
@@ -178,8 +163,8 @@ function deleteBill(billId: string) {
     $q.notify({ type: 'warning', message: '至少保留一个账单' });
     return;
   }
-  bills.value = bills.value.filter((bill) => bill.id !== billId);
-  localStorage.removeItem(`${ROWS_PREFIX}${billId}`);
+  bills.value = bills.value.filter((bill: BillMeta) => bill.id !== billId);
+  storage.removeRows(billId);
   if (activeBillId.value === billId) {
     activeBillId.value = getFirstBillId();
     persistActiveBill();
@@ -192,3 +177,33 @@ onMounted(() => {
   loadBills();
 });
 </script>
+
+<style scoped>
+.app-header {
+  background: var(--q-background);
+  color: var(--q-on-background);
+  box-shadow: none !important;
+}
+
+.app-header :deep(.q-toolbar) {
+  background: transparent;
+}
+
+.dark-mode-btn {
+  opacity: 0.7;
+}
+
+.dark-mode-btn:hover {
+  opacity: 1;
+}
+
+.body--dark .app-header {
+  background: #1d1d1d;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.body--light .app-header {
+  background: #ffffff;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+</style>

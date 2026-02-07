@@ -1,26 +1,18 @@
-import { watch } from 'vue';
 import { useQuasar, Dark } from 'quasar';
-
-const DARK_MODE_KEY = 'xb-calc-dark-mode';
+import { useStorageStore } from 'stores/storage-store';
 
 export function useDarkMode() {
   const $q = useQuasar();
+  const storage = useStorageStore();
 
   // 从 localStorage 读取用户偏好
   function getStoredDarkMode(): boolean | null {
-    const stored = localStorage.getItem(DARK_MODE_KEY);
-    if (stored === 'true') return true;
-    if (stored === 'false') return false;
-    return null; // 使用 auto 模式
+    return storage.getDarkMode();
   }
 
   // 保存用户偏好到 localStorage
   function setStoredDarkMode(value: boolean | null) {
-    if (value === null) {
-      localStorage.removeItem(DARK_MODE_KEY);
-    } else {
-      localStorage.setItem(DARK_MODE_KEY, value ? 'true' : 'false');
-    }
+    storage.setDarkMode(value);
   }
 
   // 初始化 dark mode
