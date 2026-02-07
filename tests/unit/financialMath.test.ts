@@ -239,4 +239,42 @@ describe('financialMath', () => {
       expect(evaluateFinancial('1e3*2')).toBe('2000');
     });
   });
+
+  describe('隐式乘法', () => {
+    test('数字和常量之间的隐式乘法', () => {
+      const result1 = evaluateFinancial('2pi');
+      expect(parseFloat(result1)).toBeCloseTo(2 * Math.PI, 10);
+      const result2 = evaluateFinancial('3e');
+      expect(parseFloat(result2)).toBeCloseTo(3 * Math.E, 10);
+    });
+
+    test('括号和数字之间的隐式乘法', () => {
+      expect(evaluateFinancial('(1+2)3')).toBe('9');
+      expect(evaluateFinancial('2(1+2)')).toBe('6');
+    });
+
+    test('括号和常量之间的隐式乘法', () => {
+      const result = evaluateFinancial('(1+2)pi');
+      expect(parseFloat(result)).toBeCloseTo(3 * Math.PI, 10);
+    });
+
+    test('括号和括号之间的隐式乘法', () => {
+      expect(evaluateFinancial('(1+2)(3+4)')).toBe('21');
+    });
+
+    test('常量之间的隐式乘法', () => {
+      const result = evaluateFinancial('pi e');
+      expect(parseFloat(result)).toBeCloseTo(Math.PI * Math.E, 10);
+    });
+
+    test('常量和数字之间的隐式乘法', () => {
+      const result = evaluateFinancial('pi 2');
+      expect(parseFloat(result)).toBeCloseTo(Math.PI * 2, 10);
+    });
+
+    test('常量和括号之间的隐式乘法', () => {
+      const result = evaluateFinancial('pi(2+3)');
+      expect(parseFloat(result)).toBeCloseTo(Math.PI * 5, 10);
+    });
+  });
 });

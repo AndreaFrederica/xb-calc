@@ -352,7 +352,38 @@ function tokenizeExpression(expr: string): (Decimal | string)[] {
     i++;
   }
 
-  return tokens;
+  // 处理隐式乘法：在数字和函数/常量之间、右括号和数字/函数/常量/左括号之间、常量之间插入乘号
+  const result: (Decimal | string)[] = [];
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i]!;
+    result.push(token);
+
+    // 检查是否需要插入隐式乘法
+    if (i < tokens.length - 1) {
+      const nextToken = tokens[i + 1]!;
+      const isNumber = token instanceof Decimal;
+      const isRightParen = token === ')';
+      const isConstantOrFunction = typeof token === 'string' && /^[a-zA-Z]/.test(token);
+      const isNextNumber = nextToken instanceof Decimal;
+      const isNextFunctionOrConstant = typeof nextToken === 'string' && /^[a-zA-Z]/.test(nextToken);
+      const isNextLeftParen = nextToken === '(';
+
+      // 数字后面跟着函数/常量/左括号：数字 * 函数/常量
+      if (isNumber && (isNextFunctionOrConstant || isNextLeftParen)) {
+        result.push('*');
+      }
+      // 右括号后面跟着数字/函数/常量/左括号：括号 * ...
+      else if (isRightParen && (isNextNumber || isNextFunctionOrConstant || isNextLeftParen)) {
+        result.push('*');
+      }
+      // 常量/函数后面跟着数字/左括号/常量/函数：pi * 2, pi * (, pi * e, sin * 2
+      else if (isConstantOrFunction && (isNextNumber || isNextLeftParen || isNextFunctionOrConstant)) {
+        result.push('*');
+      }
+    }
+  }
+
+  return result;
 }
 
 // 中缀转后缀（Shunting-yard 算法）
@@ -369,7 +400,11 @@ function infixToPostfix(tokens: (Decimal | string)[]): (Decimal | string)[] {
   };
 
   const isFunction = (token: string): boolean => {
-    return ['sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'log', 'ln', 'exp', 'sqrt', 'cbrt', 'factorial', 'pi', 'e'].includes(token);
+    return ['sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'log', 'ln', 'exp', 'sqrt', 'cbrt', 'factorial'].includes(token);
+  };
+
+  const isConstant = (token: string): boolean => {
+    return ['pi', 'e'].includes(token);
   };
 
   const getPrecedence = (op: string): number => {
@@ -378,6 +413,9 @@ function infixToPostfix(tokens: (Decimal | string)[]): (Decimal | string)[] {
 
   for (const token of tokens) {
     if (token instanceof Decimal) {
+      output.push(token);
+    } else if (isConstant(token)) {
+      // 常量直接推到输出栈（类似数字）
       output.push(token);
     } else if (/[+\-*/^]/.test(token)) {
       const tokenPrecedence = getPrecedence(token);

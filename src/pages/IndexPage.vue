@@ -12,8 +12,8 @@
         narrow-indicator
         no-caps
       >
-        <q-tab name="table" label="表格计算" icon="table_chart" />
-        <q-tab name="standard" label="普通计算器" icon="calculate" />
+        <q-tab name="table" label="表格计算 (Alt+1)" icon="table_chart" />
+        <q-tab name="standard" label="普通计算器 (Alt+2)" icon="calculate" />
       </q-tabs>
 
       <q-separator />
@@ -686,6 +686,20 @@ function moveRow(delta: number) {
 }
 
 function handleGlobalKeydown(event: KeyboardEvent) {
+  // 处理标签页切换快捷键
+  if (event.altKey) {
+    if (event.key === '1') {
+      event.preventDefault();
+      activeTab.value = 'table';
+      return;
+    }
+    if (event.key === '2') {
+      event.preventDefault();
+      activeTab.value = 'standard';
+      return;
+    }
+  }
+
   // 只在表格计算模式下处理键盘事件
   if (activeTab.value !== 'table') {
     return;

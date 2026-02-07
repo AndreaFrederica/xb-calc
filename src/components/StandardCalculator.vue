@@ -9,11 +9,16 @@
             <q-tooltip>清空历史</q-tooltip>
           </q-btn>
         </div>
+        <!-- ANS 显示区域 -->
+        <div class="history-sidebar-ans">
+          <div class="text-caption text-grey-6">ANS</div>
+          <div class="history-sidebar-ans-value">{{ formatHistoryResult(lastAnswer.toString()) }}</div>
+        </div>
         <div class="history-sidebar-content" ref="historyDisplayRef">
           <div v-if="history.length === 0" class="history-sidebar-empty">暂无历史记录</div>
           <div v-else v-for="(item, index) in history" :key="index" class="history-sidebar-item">
-            <div class="history-sidebar-expression">{{ item.expression }}</div>
-            <div class="history-sidebar-result">{{ item.result }}</div>
+            <div class="history-sidebar-expression">{{ formatExpressionForDisplay(item.expression) }}</div>
+            <div class="history-sidebar-result">{{ formatHistoryResult(item.result) }}</div>
           </div>
         </div>
       </div>
@@ -70,8 +75,8 @@
               <!-- 历史记录显示区（最多4条） -->
               <div class="history-display" ref="historyDisplayRefMobile">
                 <div v-for="(item, index) in displayHistory" :key="index" class="history-item">
-                  <div class="history-expression">{{ item.expression }}</div>
-                  <div class="history-result">{{ item.result }}</div>
+                  <div class="history-expression">{{ formatExpressionForDisplay(item.expression) }}</div>
+                  <div class="history-result">{{ formatHistoryResult(item.result) }}</div>
                 </div>
               </div>
 
@@ -98,7 +103,7 @@
 
               <!-- 当前结果显示 -->
               <div class="current-result" :class="{ 'is-hidden': displayResult === '0' }">
-                {{ displayResult }}
+                {{ formattedDisplayResult }}
               </div>
             </q-card-section>
           </q-card>
@@ -337,6 +342,22 @@ const displayHistory = computed(() => {
   return history.value.slice(-4);
 });
 
+// 格式化显示结果（动态应用数字分隔符）
+const formattedDisplayResult = computed(() => {
+  if (displayResult.value === 'Syntax Error' || displayResult.value === 'Error' || displayResult.value === 'NaN') {
+    return displayResult.value;
+  }
+  return applyDigitGrouping(displayResult.value);
+});
+
+// 格式化历史记录结果
+function formatHistoryResult(result: string): string {
+  if (result === 'Syntax Error' || result === 'Error' || result === 'NaN') {
+    return result;
+  }
+  return applyDigitGrouping(result);
+}
+
 // 切换金融模式
 function toggleFinancialMode() {
   financialMode.value = !financialMode.value;
@@ -364,6 +385,15 @@ function applyDigitGrouping(value: string): string {
   return decimalPart ? `${sign}${groupedInt}.${decimalPart}` : `${sign}${groupedInt}`;
 }
 
+// 格式化表达式中的数字（用于显示）
+function formatExpressionForDisplay(expr: string): string {
+  return expr.replace(/(\d+\.?\d*)/g, (match) => {
+    // 跳过科学计数法的数字
+    if (/[eE]/.test(match)) return match;
+    return applyDigitGrouping(match);
+  });
+}
+
 // 清除历史记录
 function clearHistory() {
   history.value = [];
@@ -380,21 +410,6 @@ function scrollHistoryToBottom() {
       historyDisplayRefMobile.value.scrollTop = historyDisplayRefMobile.value.scrollHeight;
     }
   });
-}
-
-// 格式化显示结果
-function formatDisplayResult(value: number): string {
-  if (hasError.value) return 'Syntax Error';
-  if (!isFinite(value)) return 'Error';
-  if (Number.isNaN(value)) return 'NaN';
-
-  // 尝试格式化为可读格式
-  try {
-    const formatted = format(value, { precision: 10, notation: 'auto' });
-    return applyDigitGrouping(formatted);
-  } catch {
-    return applyDigitGrouping(String(value));
-  }
 }
 
 // 计算表达式
@@ -421,6 +436,9 @@ function calculate() {
       result = parseFloat(resultStr);
       displayResult.value = formatFinancialResult(resultStr);
       hasError.value = false;
+
+      // 更新 ANS
+      lastAnswer.value = result;
 
       // 添加到历史记录（限制数量）
       history.value.push({
@@ -485,7 +503,8 @@ function calculate() {
     }
 
     lastAnswer.value = result;
-    const formattedResult = formatDisplayResult(result);
+    // 不应用分组，在显示时动态应用
+    const formattedResult = format(result, { precision: 10, notation: 'auto' });
     displayResult.value = formattedResult;
     hasError.value = false;
 
@@ -534,7 +553,7 @@ function handleInput(value: string) {
   const chars = expression.value.split('');
   chars.splice(cursorPosition.value, 0, value);
   expression.value = chars.join('');
-  cursorPosition.value = Math.min(cursorPosition.value + 1, expression.value.length);
+  cursorPosition.value = Math.min(cursorPosition.value + value.length, expression.value.length);
 
   // SHIFT 模式下，输入后自动关闭
   if (shiftMode.value) {
@@ -704,6 +723,18 @@ function handleLnOrFactorial() {
 function handleKeyboard(event: KeyboardEvent) {
   const key = event.key;
 
+  // 处理标签页切换快捷键 (Alt+1 或 Alt+2)
+  if (event.altKey && (key === '1' || key === '2')) {
+    // 不阻止默认行为，让父组件处理
+    return;
+  }
+
+  // Shift 键处理
+  if (key === 'Shift') {
+    shiftMode.value = true;
+    return;
+  }
+
   // 数字键
   if (/^\d$/.test(key)) {
     event.preventDefault();
@@ -831,6 +862,13 @@ function handleKeyboard(event: KeyboardEvent) {
   }
 }
 
+// 处理 Shift 键释放
+function handleKeyUp(event: KeyboardEvent) {
+  if (event.key === 'Shift') {
+    shiftMode.value = false;
+  }
+}
+
 // 保存状态
 function saveState() {
   const state: CalcState = {
@@ -864,12 +902,14 @@ function restoreState() {
 
 onMounted(() => {
   window.addEventListener('keydown', handleKeyboard, true);
+  window.addEventListener('keyup', handleKeyUp, true);
   restoreState();
   scrollHistoryToBottom();
 });
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleKeyboard, true);
+  window.removeEventListener('keyup', handleKeyUp, true);
   saveState();
 });
 
@@ -946,6 +986,30 @@ watch(
 
 .body--light .history-sidebar-header {
   border-color: rgba(0, 0, 0, 0.1);
+}
+
+.history-sidebar-ans {
+  padding: 12px 16px;
+  background: var(--q-background);
+  border: 1px solid;
+  border-color: rgba(255, 255, 255, 0.1);
+  border-top: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.body--light .history-sidebar-ans {
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+.history-sidebar-ans-value {
+  font-family: 'Courier New', monospace;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--q-primary);
+  text-align: right;
+  word-break: break-all;
 }
 
 .history-sidebar-content {
