@@ -180,6 +180,47 @@
                   <q-tooltip>导出</q-tooltip>
                 </q-btn>
                 <q-btn
+                  flat
+                  dense
+                  size="sm"
+                  padding="none xs"
+                  class="case-toggle-btn"
+                  :class="{ 'case-toggle-active': showChineseNumber }"
+                  @click="showChineseNumber = !showChineseNumber"
+                >
+                  CH
+                  <q-tooltip>{{ showChineseNumber ? '关闭中文' : '显示中文' }}</q-tooltip>
+                </q-btn>
+                <q-btn
+                  v-if="!isDesktop"
+                  flat
+                  dense
+                  size="sm"
+                  padding="none xs"
+                  class="case-toggle-btn"
+                  :class="{ 'case-toggle-active': autoScrollOnKeypad }"
+                  @click="autoScrollOnKeypad = !autoScrollOnKeypad"
+                >
+                  AS
+                  <q-tooltip>{{ autoScrollOnKeypad ? '关闭自动滚动' : '开启自动滚动' }}</q-tooltip>
+                </q-btn>
+                <q-btn
+                  v-if="showChineseNumber"
+                  flat
+                  dense
+                  size="sm"
+                  padding="none xs"
+                  class="case-toggle-btn"
+                  :class="{ 'case-toggle-active': chineseNumberCase === 'upper' }"
+                  @click="chineseNumberCase = chineseNumberCase === 'upper' ? 'lower' : 'upper'"
+                >
+                  {{ chineseNumberCase === 'upper' ? 'A' : 'a' }}
+                  <q-tooltip>{{ chineseNumberCase === 'upper' ? '大写' : '小写' }}</q-tooltip>
+                </q-btn>
+                <div class="text-caption text-grey-7 q-ml-auto"></div>
+                <!-- 移动端清空和键盘按钮 -->
+                <q-btn
+                  v-if="!isDesktop"
                   color="negative"
                   flat
                   icon="delete_outline"
@@ -189,23 +230,6 @@
                 >
                   <q-tooltip>清空</q-tooltip>
                 </q-btn>
-                <q-toggle v-model="showChineseNumber" dense size="sm" label="CH" color="primary" />
-                <q-toggle v-model="autoScrollOnKeypad" dense size="sm" label="AS" color="primary" />
-                <q-btn-toggle
-                  v-if="showChineseNumber"
-                  v-model="chineseNumberCase"
-                  :options="[
-                    { label: '大', value: 'upper' },
-                    { label: '小', value: 'lower' },
-                  ]"
-                  dense
-                  outline
-                  color="primary"
-                  size="sm"
-                  padding="none lg"
-                />
-                <div class="text-caption text-grey-7 q-ml-auto"></div>
-                <!-- 移动端键盘按钮 -->
                 <q-btn
                   v-if="!isDesktop"
                   color="primary"
@@ -484,9 +508,16 @@ function removeRow(rowId: string) {
 }
 
 function clearAll() {
-  rows.value = [createRow()];
-  const first = ensureFirstRow();
-  if (first) selectCell(first.id, 'qty');
+  $q.dialog({
+    title: '确认清空',
+    message: '确定要清空所有行吗？此操作不可撤销。',
+    cancel: true,
+    persistent: true,
+  }).onOk(() => {
+    rows.value = [createRow()];
+    const first = ensureFirstRow();
+    if (first) selectCell(first.id, 'qty');
+  });
 }
 
 function selectCell(rowId: string, field: NumericField) {
@@ -757,12 +788,20 @@ function handleGlobalKeydown(event: KeyboardEvent) {
   }
   if (key === 'Backspace') {
     event.preventDefault();
-    backspace();
+    if (event.ctrlKey || event.metaKey) {
+      clearAll();
+    } else {
+      backspace();
+    }
     return;
   }
   if (key === 'Delete') {
     event.preventDefault();
-    clearField();
+    if (event.ctrlKey || event.metaKey) {
+      clearAll();
+    } else {
+      clearField();
+    }
     return;
   }
   if (key === 'Enter') {
@@ -931,6 +970,19 @@ onMounted(() => {
   loadFromStorage();
   window.addEventListener('keydown', handleGlobalKeydown);
   window.addEventListener('xb-bill-changed', handleBillChanged);
+
+  // 移动端：初始化空白区域为合计卡片高度
+  if (!isDesktop.value) {
+    void nextTick(() => {
+      void nextTick(() => {
+        if (totalCardRef.value?.$el) {
+          const totalCardHeight = totalCardRef.value.$el.offsetHeight;
+          const bottomSpacing = 24;
+          spacerHeight.value = `${totalCardHeight + bottomSpacing}px`;
+        }
+      });
+    });
+  }
 });
 
 onBeforeUnmount(() => {
@@ -1091,5 +1143,27 @@ watch(
 /* Dark mode 样式适配 */
 .body--dark .bg-blue-1 {
   background-color: rgba(66, 165, 245, 0.2) !important;
+}
+
+/* 中文大小写切换按钮 */
+.case-toggle-btn {
+  min-width: 28px !important;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 500;
+  font-size: 11px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.body--light .case-toggle-btn {
+  border-color: rgba(0, 0, 0, 0.15);
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.case-toggle-btn.case-toggle-active {
+  border-color: var(--q-primary);
+  color: var(--q-primary);
+  background-color: rgba(var(--q-primary-rgb), 0.1);
 }
 </style>

@@ -1,10 +1,11 @@
 <template>
   <q-card bordered class="keypad-card">
-    <q-card-section class="row items-center justify-between">
-      <div class="text-subtitle1">数字键盘</div>
+    <q-card-section class="row items-center q-gutter-xs keypad-header">
+      <q-btn class="action-btn btn-clear" label="清空" @click="$emit('clear')" />
+      <q-btn class="action-btn btn-backspace" label="退格" @click="$emit('backspace')" />
+      <q-space />
       <q-btn v-if="closable" flat dense icon="close" @click="$emit('close')" />
     </q-card-section>
-    <q-separator />
     <q-card-section class="keypad">
       <q-btn
         v-for="key in keys"
@@ -16,11 +17,6 @@
       >
         {{ key.label }}
       </q-btn>
-    </q-card-section>
-    <q-separator />
-    <q-card-section class="row q-gutter-sm action-buttons">
-      <q-btn class="action-btn btn-clear" label="清空当前" @click="$emit('clear')" />
-      <q-btn class="action-btn btn-backspace" label="退格" @click="$emit('backspace')" />
     </q-card-section>
   </q-card>
 </template>
@@ -49,10 +45,15 @@ defineEmits<{
   border-radius: 8px;
 }
 
+.keypad-header {
+  padding: 8px 12px;
+}
+
 .keypad {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
+  padding: 8px 12px 12px;
 }
 
 .keypad-btn {
@@ -97,15 +98,14 @@ defineEmits<{
 }
 
 /* 操作按钮 */
-.action-buttons {
-  justify-content: space-between;
-}
-
 .action-btn {
-  border-radius: 6px;
+  border-radius: 4px;
   text-transform: none;
   font-family: 'Roboto', sans-serif;
   font-weight: 500;
+  font-size: 12px;
+  padding: 4px 8px;
+  height: 28px;
 }
 
 .btn-clear {
